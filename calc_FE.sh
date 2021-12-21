@@ -7,6 +7,7 @@ Ion1=$1
 Ion2=$2
 i=$3
 HISTO="$REF/$Ion1$Ion2/histo_wall2"
+echo $HISTO
 rm -rf bck.*
 #cat << EOF > bw.R
 ##!/bin/Rscript
@@ -46,7 +47,7 @@ EOF
 L=$(sed "2,500d" Colvar.data | wc -l)
 echo $L
 NL=$(echo "$i*$L/10" | bc)
-sed "2,500d" Colvar.data | head -n $NL | sed -n "1~10 p" > BIAS2
+sed "2,500d" Colvar.data | head -n $NL | awk 'NR%10==1' > BIAS2
 echo $(wc -l BIAS2)
 cat opes.dat | plumed driver --noatoms --plumed /dev/stdin --kt 2.603
 
@@ -143,8 +144,8 @@ write.table(x = Bar,row.names = FALSE,col.names = FALSE,file = 'barrier')
 write.table(x = BE,row.names = FALSE,col.names = FALSE,file = 'bindE')
 dev.off()
 EOF
-sed -i "s|HISTO|$HISTO|g" plot.R
-sed -i "s|Ion1|$Ion1|g" plot.R
-sed -i "s|Ion2|$Ion2|g" plot.R
+sed -i.bak "s|HISTO|$HISTO|g" plot.R
+sed -i.bak "s|Ion1|$Ion1|g" plot.R
+sed -i.bak "s|Ion2|$Ion2|g" plot.R
 Rscript --vanilla plot.R
-
+rm -rf *.bak
