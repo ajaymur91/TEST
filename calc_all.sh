@@ -7,6 +7,6 @@ do
 	cp FE.pdf FE_$i.pdf
 done
 
-convert -alpha deactivate -verbose -delay 50 -loop 1 -density 300 FE_{1..10}.pdf FE.gif
+convert -background white -alpha remove -alpha off -verbose -loop 1 -delay 50 -dispose 3 -density 300 FE_{1..10}.pdf FE.gif
 rm -rf FE_*.pdf \#*
 
