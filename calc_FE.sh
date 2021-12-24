@@ -5,9 +5,11 @@ conda activate CLIPS
 REF='./reference'
 Ion1=$1
 Ion2=$2
-i=$3
+Solv=$3
+nstepsmtd=$4
+i=$5
+#Time=$(printf %.1f $(echo "0.000001*$nstepsmtd*$i/10" | bc -l))
 HISTO="$REF/$Ion1$Ion2/histo_wall2"
-echo $HISTO
 rm -rf bck.*
 #cat << EOF > bw.R
 ##!/bin/Rscript
@@ -44,10 +46,11 @@ HISTOGRAM ...
 DUMPGRID GRID=hh  FILE=histo FMT=%24.16e
 EOF
 
-L=$(sed "2,500d" Colvar.data | wc -l)
+L=$(sed "2,50d" Colvar.data | wc -l)
 echo $L
 NL=$(echo "$i*$L/10" | bc)
-sed "2,500d" Colvar.data | head -n $NL | awk 'NR%10==1' > BIAS2
+sed "2,50d" Colvar.data | head -n $NL | sed -n "1~1 p" > BIAS2
+Time=$(printf %.1f $(tail -n 1  BIAS2 | awk '{print $1/1000}'| bc -l))
 echo $(wc -l BIAS2)
 cat opes.dat | plumed driver --noatoms --plumed /dev/stdin --kt 2.603
 
@@ -113,23 +116,38 @@ Bar <- F[L] - LMM$minima[1]
 # calc binding energy
 BE <- NA
 L <- which(x>0.65)[1]
-if(length(LMM$minima) > 1){ 
-  BE <- LMM$minima[2] - LMM$minima[1]
-  Min2 <- which(F==LMM$minima[2])
+if(length(LMM$minima) > 1){
+  Nm <- length(LMM$minima)	
+  for(i in Nm:2){
+  Min2 <- which(F==LMM$minima[i])
+  BE <- LMM$minima[i] - LMM$minima[1]
+  if(x[Min2]<0.65){
+  break;
+  }
+  }
 } else{ 
     BE <- F[L] - LMM$minima[1]
     Min2 <- L
 }
+#L <- which(x>0.65)[1]
+#if(length(LMM$minima) > 1){ 
+#  BE <- LMM$minima[2] - LMM$minima[1]
+#  Min2 <- which(F==LMM$minima[2])
+
 
 # Plot
+library(latex2exp)
 par(mar=c(5,5,2,2))
-plot(x,F-LMM$minima[1],ylim=c(-10,20),xlim=c(0.15,0.75),type='l',col="red",ylab="FE (kT)",xlab="r (nm)",cex.lab=1.5,lwd=2,cex.axis=1.2,main="PMF (Ion1-Ion2)")
+plot(x,F-LMM$minima[1],ylim=c(-10,20),xlim=c(0.15,0.75),type='l',col="red",ylab=TeX('$\\Delta G$ $(kT)$'),xlab="r (nm)",cex.main=2,cex.lab=2,lwd=2,cex.axis=1.5,main=TeX('PMF (Ion1$^+$ - Ion2$^-$ / Solv)'))
+
+#plot(x,F-LMM$minima[1],ylim=c(-10,20),xlim=c(0.15,0.75),type='l',col="red",ylab="FE (kT)",xlab="r (nm)",cex.lab=1.5,lwd=2,cex.axis=1.2,main="PMF (Ion1 - Ion2 in Solv)")
 
 if (file.exists('HISTO')){ 
 lines(x2,F2 - LMM2$minima[1],lty=2,lwd=2)
 }
 
 text(0.65,15,"Upper\nWall",pos=2,cex=2,col="blue")
+text(0.65,18.5,"Time (ns)",pos=4,cex=1.5,col="red")
 abline(v=0.65,lwd=3,col="blue")
 abline(h=0,lty=3)
 legend("bottomright",c('Bulk','Cluster'),col=c('black','red'),bg="antiquewhite",lty=c(2,1),cex=1.8,lwd=c(3,3))
@@ -138,14 +156,16 @@ shape::Arrows(x0=x[Min],y0=0,x1=x[Min],y1=Bar,code=2,arr.adj=1,lwd=2)
 text(x[Min],Bar+1,paste0(round(Bar,2)," kT"),pos=3,cex=2,col="green3")
 
 shape::Arrows(x0=x[Min2],y0=0,x1=x[Min2],y1=BE,code=2,arr.adj=1,lwd=2)
-text(x[Min2],BE+1,paste0(round(BE,2)," kT"),pos=3,cex=2,col="green3")
+text(x[Min2],-3.5,paste0(round(BE,2)," kT"),pos=3,cex=2,col="green3")
 
 write.table(x = Bar,row.names = FALSE,col.names = FALSE,file = 'barrier')
 write.table(x = BE,row.names = FALSE,col.names = FALSE,file = 'bindE')
 dev.off()
 EOF
-sed -i.bak "s|HISTO|$HISTO|g" plot.R
-sed -i.bak "s|Ion1|$Ion1|g" plot.R
-sed -i.bak "s|Ion2|$Ion2|g" plot.R
+sed -i "s|HISTO|$HISTO|g" plot.R
+sed -i "s|Ion1|$Ion1|g" plot.R
+sed -i "s|Ion2|$Ion2|g" plot.R
+sed -i "s|Solv|$Solv|g" plot.R
+sed -i "s|Time |$Time |g" plot.R
 Rscript --vanilla plot.R
-rm -rf *.bak
+

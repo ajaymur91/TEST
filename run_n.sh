@@ -61,7 +61,7 @@ R_SOL=1.8
 #Trajectory sampling time (ps) - do not change
    nsteps=50000
  nstepsmd=100000     #dt is set to 0.5 fs in mdp file
-nstepsmtd=5000000 #0
+nstepsmtd=10000000 #0
 
 while getopts c:a:f:n:T:P:N:S:R:V: flag
 do
@@ -266,7 +266,7 @@ UPPER_WALLS ...
  OFFSET=0.
  LABEL=uwall
 ... UPPER_WALLS
-RESTRAINT ARG=di AT=0.6 KAPPA=5000.0 LABEL=restraint
+RESTRAINT ARG=di AT=0.32 KAPPA=5000.0 LABEL=restraint
 EOF
 echo "PRINT ARG=* FILE=COLVAR STRIDE=100" >> plumed.dat
 
@@ -309,8 +309,8 @@ opes: OPES_METAD ...
   TEMP=${TEMPERATURE}
   PACE=50
   BARRIER=100
-  SIGMA=0.05
-  SIGMA_MIN=0.0005
+  SIGMA=0.1
+  #SIGMA_MIN=0.01
   #BIASFACTOR=25
   STATE_WFILE=State.data
   STATE_WSTRIDE=10000
@@ -320,14 +320,14 @@ opes: OPES_METAD ...
 UPPER_WALLS ...
  ARG=di
  AT=0.65
- KAPPA=20000.0
+ KAPPA=10000.0
  EXP=2
  EPS=1
  OFFSET=0.
  LABEL=uwall
 ... UPPER_WALLS
 
-PRINT FMT=%g STRIDE=10 FILE=Colvar.data ARG=di,ene,cn,*.bias,opes.*
+PRINT FMT=%g STRIDE=100 FILE=Colvar.data ARG=di,ene,cn,*.bias,opes.*
 EOF
 
 ###############################
@@ -337,9 +337,21 @@ echo -e "\n Run WT-MTD - $Ion1 - $Ion2 and $NSOLV $Solv \n"
 retry gmx grompp -f verlet.mdp -c md.gro -p system.top -o mtd.tpr #&> /dev/null
 retry gmx mdrun -deffnm mtd -nsteps $nstepsmtd -plumed plumed_MTD.dat -ntomp $NTOMP #&> /dev/null
 
+#sed -i.bak '1s/^/RESTART \n/' plumed_MTD.dat
+#B=$(cat barrier | awk -v T=${TEMPERATURE} '{print $1*2.479*T*2/298}')
+
+#if awk -v number=$B 'BEGIN{exit !(number <= 10)}'
+#then
+#   B=10
+#fi
+
+#sed -i.bak "s/BARRIER=100/BARRIER=$B/" plumed_MTD.dat
+#sed -i.bak "s/SIGMA/#SIGMA/" plumed_MTD.dat
+#sed -i.bak "s/#BIASFACTOR=25/BIASFACTOR=$B/" plumed_MTD.dat
+#retry gmx mdrun -deffnm mtd -nsteps $((nstepsmtd*1)) -plumed plumed_MTD.dat -ntomp $NTOMP #&> /dev/null
 ###############################
 rm -rf barrier \#*
-bash calc_all.sh $Ion1 $Ion2; 
+bash calc_all.sh $Ion1 $Ion2 $Solv $nstepsmtd
 
 # optional (view results)
 #conda activate MUPDF
